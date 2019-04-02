@@ -25,7 +25,7 @@ type mFileLogger struct {
 	freeListMu    sync.Mutex
 	flushInterval time.Duration
 	fileSplitSize uint64
-	bufferSize	  int
+	bufferSize    int
 }
 
 type bufferWriter struct {
@@ -77,7 +77,7 @@ func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize
 		name:          name,
 		flushInterval: flushInterval,
 		fileSplitSize: fileSplitSize,
-		bufferSize:	bufferSize,
+		bufferSize:    bufferSize,
 	}
 	go writer.flushDaemon()
 	return writer

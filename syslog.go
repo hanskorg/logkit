@@ -31,7 +31,7 @@ func NewSyslogWriter(network, raddr string, level Level, tag string) (Writer, er
 	default:
 		priority = syslog.LOG_INFO
 	}
-	writer, err := syslog.Dial(network, raddr,priority, tag)
+	writer, err := syslog.Dial(network, raddr, priority, tag)
 	if err != nil {
 		return nil, err
 	}

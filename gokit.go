@@ -44,12 +44,15 @@ const (
 	LevelError
 	LevelFatal
 )
+
 type Channel byte
+
 const (
 	FIlE Channel = iota
 	SYSLOG
 	KAFKA
 )
+
 type Writer interface {
 	//Write 写日志
 	Write(Level, string)
@@ -62,7 +65,7 @@ func Exit() {
 
 }
 
-func Init(channel Channel,name string, level Level) error {
+func Init(channel Channel, name string, level Level) error {
 	if inited {
 		return fmt.Errorf("logkit has been inited")
 	}
@@ -73,13 +76,13 @@ func Init(channel Channel,name string, level Level) error {
 		return fmt.Errorf("log name must not be empty")
 	}
 
-	logLevel     = level
+	logLevel = level
 	logLevelName = getLevelName(level)
-	wChannel	 = channel
+	wChannel = channel
 	return nil
 }
 
-func SetPath(path string)  {
+func SetPath(path string) {
 	logPath = path
 }
 func getLevelName(level Level) string {
@@ -97,11 +100,11 @@ func write(level Level, msg string) {
 			if logPath == "" {
 				logPath = "/data/logs/" + logName + ".log"
 			}
-			logWriter = NewFileLogger(logPath, logName, time.Second * 5,  1204 * 1024 * 1800,  256 * 1024  )
+			logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 256*1024)
 			inited = true
 		}
 		if logWriter == nil && wChannel == SYSLOG {
-			logWriter ,_ = NewSyslogWriter("", "", level, logName)
+			logWriter, _ = NewSyslogWriter("", "", level, logName)
 		}
 		return
 	}
@@ -114,7 +117,6 @@ func write(level Level, msg string) {
 func level() Level {
 	return logLevel
 }
-
 
 func Debug(str string) {
 	if level() <= LevelDebug {
@@ -187,4 +189,3 @@ func Errorf(format string, args ...interface{}) {
 		write(LevelError, fmt.Sprintf(format, args...))
 	}
 }
-

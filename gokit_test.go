@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	Init(SYSLOG,"test", LevelInfo)
+	Init(SYSLOG, "test", LevelInfo)
 
 }
 func TestGoKit(t *testing.T) {
@@ -26,9 +26,9 @@ func BenchmarkGoKit(b *testing.B) {
 func TestInfo(t *testing.T) {
 	defer Exit()
 	fmt.Println("start")
-	for i := 0; i< 10 ; i++ {
+	for i := 0; i < 10; i++ {
 		go func(i int) {
-			Info("test "+ strconv.FormatInt(int64(i), 10))
+			Info("test " + strconv.FormatInt(int64(i), 10))
 		}(i)
 	}
 	fmt.Println("end")
@@ -44,7 +44,7 @@ func TestInfo(t *testing.T) {
 	Info("test 3")
 }
 
-func TestBuffer(t *testing.T)  {
+func TestBuffer(t *testing.T) {
 	defer Exit()
 
 	//for i := 0 ;  i < 1024; i++  {
