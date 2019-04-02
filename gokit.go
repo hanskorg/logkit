@@ -16,6 +16,10 @@ var (
 
 	logName string
 
+	logPath string
+
+	wChannel Channel
+
 	alsoStdout bool
 
 	levelToNames = map[Level]string{
@@ -66,22 +70,18 @@ func Init(channel Channel,name string, level Level) error {
 	if name != "" {
 		logName = name
 	} else {
-		fmt.Errorf("log name must not be empty")
+		return fmt.Errorf("log name must not be empty")
 	}
 
 	logLevel     = level
 	logLevelName = getLevelName(level)
-
-	if logWriter == nil && channel == FIlE {
-		logWriter = NewFileLogger(logName+".log", logName, time.Second * 5,  1204 * 1024 * 1800,  256 * 1024  )
-		inited = true
-	}
-	if logWriter == nil && channel == SYSLOG {
-		logWriter ,_ = NewSyslogWriter("", "", level, name)
-	}
+	wChannel	 = channel
 	return nil
 }
 
+func SetPath(path string)  {
+	logPath = path
+}
 func getLevelName(level Level) string {
 	levelName, _ := levelToNames[level]
 	return levelName
@@ -93,7 +93,16 @@ func format(msg string) string {
 
 func write(level Level, msg string) {
 	if !inited {
-		fmt.Println(time.Now().Format("2006-01-02 15:04:05") + " [" + logLevelName + "] " + msg)
+		if logWriter == nil && wChannel == FIlE {
+			if logPath == "" {
+				logPath = "/data/logs/" + logName + ".log"
+			}
+			logWriter = NewFileLogger(logPath, logName, time.Second * 5,  1204 * 1024 * 1800,  256 * 1024  )
+			inited = true
+		}
+		if logWriter == nil && wChannel == SYSLOG {
+			logWriter ,_ = NewSyslogWriter("", "", level, logName)
+		}
 		return
 	}
 	logWriter.Write(level, format(msg))
