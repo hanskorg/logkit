@@ -1,0 +1,8 @@
+check:
+  stage: build
+  only:
+    - branches
+  except:
+    - beta
+  script:
+    - docker_test
