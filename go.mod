@@ -1,3 +1,3 @@
-module git.qietv.work/go-public/logkit
+module logkit
 
 go 1.12
