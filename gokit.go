@@ -102,12 +102,11 @@ func write(level Level, msg string) {
 				logPath = "/data/logs/" + logName + ".log"
 			}
 			logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 256*1024)
-			inited = true
 		}
 		if logWriter == nil && wChannel == SYSLOG {
 			logWriter, _ = NewSyslogWriter("", "", level, logName)
 		}
-		return
+		inited = true
 	}
 	logWriter.Write(level, format(msg))
 	if alsoStdout {
