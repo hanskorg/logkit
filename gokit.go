@@ -2,6 +2,7 @@ package logkit
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -188,4 +189,17 @@ func Errorf(format string, args ...interface{}) {
 	if level() <= LevelError {
 		write(LevelError, fmt.Sprintf(format, args...))
 	}
+}
+
+func NewLogWriter(level Level) io.Writer {
+	return &stdWriter{level}
+}
+
+type stdWriter struct {
+	level Level
+}
+
+func (this *stdWriter) Write(data []byte) (int, error) {
+	write(this.level, string(data))
+	return len(data), nil
 }

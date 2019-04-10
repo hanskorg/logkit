@@ -84,9 +84,9 @@ func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize
 }
 
 func (w *mFileLogger) flushDaemon() {
-	//for _ = range time.NewTicker(w.flushInterval).C {
-	//	w.flush()
-	//}
+	for _ = range time.NewTicker(w.flushInterval).C {
+		w.flush()
+	}
 }
 
 func (w *mFileLogger) flush() {
