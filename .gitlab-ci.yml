@@ -1,4 +1,6 @@
 check:
+  tags:
+    -v1.0
   stage: build
   only:
     - branches
