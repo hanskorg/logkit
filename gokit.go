@@ -73,7 +73,6 @@ func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCal
 	}
 
 	logLevel = level
-	logLevelName = getLevelName(level)
 	channel = _channel
 	alsoStdout = _alsoStdout
 	withCaller = _withCaller
@@ -88,12 +87,12 @@ func getLevelName(level Level) string {
 	return levelName
 }
 
-func format(msg string) string {
+func format(level Level, msg string) string {
 	if withCaller {
 		_, file, line, _ := runtime.Caller(3)
-		return fmt.Sprintf("%s [%s] %s:%d %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, file, line, msg)
+		return fmt.Sprintf("%s [%s] %s:%d %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), file, line, msg)
 	} else {
-		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, msg)
+		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
 }
 
@@ -110,7 +109,7 @@ func write(level Level, msg string) {
 		}
 		inited = true
 	}
-	messageStr := format(msg)
+	messageStr := format(level, msg)
 	logWriter.Write(level, messageStr)
 	if alsoStdout {
 		fmt.Println(messageStr)
