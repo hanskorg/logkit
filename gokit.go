@@ -3,25 +3,20 @@ package logkit
 import (
 	"fmt"
 	"io"
+	"runtime"
 	"time"
 )
 
 var (
-	inited bool
-
-	logWriter Writer
-
-	logLevel = LevelInfo
-
+	inited       bool
+	logWriter    Writer
+	logLevel     = LevelInfo
 	logLevelName string
-
-	logName string
-
-	logPath string
-
-	wChannel Channel
-
-	alsoStdout bool
+	logName      string
+	logPath      string
+	channel      Channel
+	alsoStdout   bool
+	withCaller   bool
 
 	levelToNames = map[Level]string{
 		LevelFatal: "FATAL",
@@ -66,7 +61,7 @@ func Exit() {
 
 }
 
-func Init(channel Channel, name string, level Level) error {
+func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller bool) error {
 	if inited {
 		return fmt.Errorf("logkit has been inited")
 	}
@@ -79,7 +74,9 @@ func Init(channel Channel, name string, level Level) error {
 
 	logLevel = level
 	logLevelName = getLevelName(level)
-	wChannel = channel
+	channel = _channel
+	alsoStdout = _alsoStdout
+	withCaller = _withCaller
 	return nil
 }
 
@@ -92,25 +89,31 @@ func getLevelName(level Level) string {
 }
 
 func format(msg string) string {
-	return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, msg)
+	if withCaller {
+		funcName, file, line, _ := runtime.Caller(2)
+		return fmt.Sprintf("%s [%s] %s:%d::%s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, file, line, funcName, msg)
+	} else {
+		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, msg)
+	}
 }
 
 func write(level Level, msg string) {
 	if !inited {
-		if logWriter == nil && wChannel == FIlE {
+		if logWriter == nil && channel == FIlE {
 			if logPath == "" {
 				logPath = "/data/logs/" + logName + ".log"
 			}
 			logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 256*1024)
 		}
-		if logWriter == nil && wChannel == SYSLOG {
+		if logWriter == nil && channel == SYSLOG {
 			logWriter, _ = NewSyslogWriter("", "", level, logName)
 		}
 		inited = true
 	}
-	logWriter.Write(level, format(msg))
+	messageStr := format(msg)
+	logWriter.Write(level, messageStr)
 	if alsoStdout {
-		fmt.Println(time.Now().Format("2006-01-02 15:04:05") + " [" + logLevelName + "] " + msg)
+		fmt.Println(messageStr)
 	}
 }
 
