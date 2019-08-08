@@ -90,8 +90,8 @@ func getLevelName(level Level) string {
 
 func format(msg string) string {
 	if withCaller {
-		funcName, file, line, _ := runtime.Caller(2)
-		return fmt.Sprintf("%s [%s] %s:%d::%s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, file, line, funcName, msg)
+		_, file, line, _ := runtime.Caller(3)
+		return fmt.Sprintf("%s [%s] %s:%d %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, file, line, msg)
 	} else {
 		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), logLevelName, msg)
 	}
