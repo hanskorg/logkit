@@ -12,12 +12,11 @@ func init()  {
 	var l Level
 	flag.Int("level", int(l) , "l")
 	flag.Parse()
-	println(l.Get())
 }
 
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
-
+	Init(SYSLOG, "test", LevelDebug, true, BasePath)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		Info("test " + strconv.FormatInt(int64(i), 10))

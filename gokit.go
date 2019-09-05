@@ -55,7 +55,7 @@ const (
 	_ Caller = iota
 	NONE
 	FullPATH
-	File
+	BasePath
 )
 
 type Writer interface {
@@ -106,9 +106,9 @@ func format(level Level, msg string) string {
 		)
 		pc, file, line, _ = runtime.Caller(3)
 		if withCaller == FullPATH {
-			context = fmt.Sprintf("%s:%d(%s)", file, line, runtime.FuncForPC(pc).Name())
+			context = fmt.Sprintf("%s:%d(%s)", file, line, path.Base(runtime.FuncForPC(pc).Name()))
 		}else{
-			context = fmt.Sprintf("%s:%d(%s)",   path.Base(file), line, runtime.FuncForPC(pc).Name())
+			context = fmt.Sprintf("%s:%d(%s)",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
 		}
 		return fmt.Sprintf("%s [%s] %s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
