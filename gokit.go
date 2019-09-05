@@ -3,6 +3,7 @@ package logkit
 import (
 	"fmt"
 	"io"
+	"path"
 	"runtime"
 	"time"
 )
@@ -16,7 +17,7 @@ var (
 	logPath      string
 	channel      Channel
 	alsoStdout   bool
-	withCaller   bool
+	withCaller   Caller
 
 	levelToNames = map[Level]string{
 		LevelFatal: "FATAL",
@@ -42,11 +43,19 @@ const (
 )
 
 type Channel byte
+type Caller byte
 
 const (
 	FIlE Channel = iota
 	SYSLOG
 	KAFKA
+)
+
+const (
+	_ Caller = iota
+	NONE
+	FullPATH
+	File
 )
 
 type Writer interface {
@@ -61,7 +70,7 @@ func Exit() {
 
 }
 
-func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller bool) error {
+func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller Caller) error {
 	if inited {
 		return fmt.Errorf("logkit has been inited")
 	}
@@ -88,9 +97,20 @@ func getLevelName(level Level) string {
 }
 
 func format(level Level, msg string) string {
-	if withCaller {
-		_, file, line, _ := runtime.Caller(3)
-		return fmt.Sprintf("%s [%s] %s:%d %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), file, line, msg)
+	if withCaller != NONE {
+		var (
+			context string
+			pc      uintptr
+			file    string
+			line    int
+		)
+		pc, file, line, _ = runtime.Caller(3)
+		if withCaller == FullPATH {
+			context = fmt.Sprintf("%s:%d(%s)", file, line, runtime.FuncForPC(pc).Name())
+		}else{
+			context = fmt.Sprintf("%s:%d(%s)",   path.Base(file), line, runtime.FuncForPC(pc).Name())
+		}
+		return fmt.Sprintf("%s [%s] %s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
 		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
