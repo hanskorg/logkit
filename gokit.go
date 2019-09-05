@@ -29,7 +29,7 @@ var (
 )
 
 //Level 日志等级
-type Level byte
+type Level int
 
 const (
 	Default Level = iota
@@ -112,7 +112,7 @@ func write(level Level, msg string) {
 	messageStr := format(level, msg)
 	logWriter.Write(level, messageStr)
 	if alsoStdout {
-		fmt.Println(messageStr)
+		fmt.Print(messageStr)
 	}
 }
 

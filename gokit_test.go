@@ -1,19 +1,20 @@
 package logkit
 
 import (
+	"flag"
 	"fmt"
 	"strconv"
 	"testing"
 	"time"
 )
 
-func init() {
-	Init(SYSLOG, "test", LevelInfo)
+func init()  {
+	var l Level
+	flag.Int("level", int(l) , "l")
+	flag.Parse()
+	println(l.Get())
+}
 
-}
-func TestGoKit(t *testing.T) {
-	Init(FIlE, "test", LevelDebug)
-}
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
 
@@ -52,4 +53,7 @@ func TestBuffer(t *testing.T) {
 	//}
 	Infof("test %s --- %s", "1", "23")
 	//Exit()
+}
+
+func TestFlag(t *testing.T)  {
 }
