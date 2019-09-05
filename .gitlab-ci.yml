@@ -1,8 +1,10 @@
 check:
+  tags:
+    - v1.0
   stage: build
   only:
     - branches
   except:
     - beta
   script:
-    - docker_test
+    - go test
