@@ -106,13 +106,13 @@ func format(level Level, msg string) string {
 		)
 		pc, file, line, _ = runtime.Caller(3)
 		if withCaller == FullPATH {
-			context = fmt.Sprintf("%s:%d(%s)", file, line, path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%-15s:%03d:%s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
 		}else{
-			context = fmt.Sprintf("%s:%d(%s)",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%-15s:%03d:%s",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
 		}
-		return fmt.Sprintf("%s [%s] %s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
+		return fmt.Sprintf("%s\t[%5s]\t%s %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
-		return fmt.Sprintf("%s [%s] %s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
+		return fmt.Sprintf("%s\t[%5s]\t%s \n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
 }
 
