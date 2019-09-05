@@ -1,6 +1,6 @@
 check:
   tags:
-    - v1.0
+    - k8s
   stage: build
   only:
     - branches
