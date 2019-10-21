@@ -16,7 +16,7 @@ func init()  {
 
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
-	Init(SYSLOG, "test", LevelDebug, true, BasePath)
+	Init(SYSLOG, "test", LevelDebug, true, NoFuncName)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		Info("test " + strconv.FormatInt(int64(i), 10))

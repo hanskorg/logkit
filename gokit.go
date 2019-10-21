@@ -54,7 +54,8 @@ const (
 const (
 	_ Caller = iota
 	NONE
-	FullPATH
+	FullPATHFunc
+	BasePathFunc
 	BasePath
 )
 
@@ -105,11 +106,17 @@ func format(level Level, msg string) string {
 			line    int
 		)
 		pc, file, line, _ = runtime.Caller(3)
-		if withCaller == FullPATH {
+		switch withCaller {
+		case FullPATHFunc:
 			context = fmt.Sprintf("%s:%03d::%s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
-		}else{
+		case BasePathFunc:
 			context = fmt.Sprintf("%s:%03d::%s",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
+		case BasePath:
+			context = fmt.Sprintf("%s:%03d",   path.Base(file), line)
+		default:
+			context = fmt.Sprintf("%s:%03d",   path.Base(file), line)
 		}
+
 		return fmt.Sprintf("%s\t[%3s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
 		return fmt.Sprintf("%s\t[%3s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
