@@ -10,7 +10,7 @@ import (
 
 var (
 	inited       bool
-	logWriter    Writer
+	logWriter    io.Writer
 	logLevel     = LevelInfo
 	logLevelName string
 	logName      string
@@ -60,32 +60,42 @@ const (
 
 type Writer interface {
 	//Write 写日志
-	Write(Level, string)
+	Write(msg []byte) (int, error)
 	//Exit 日志退出
-	Exit()
+	Close() error
 }
 
 func Exit() {
-	logWriter.Exit()
-
+	logWriter.(io.Closer).Close()
 }
 
-func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller Caller) error {
+func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller Caller) (writer io.Writer, err error ){
 	if inited {
-		return fmt.Errorf("logkit has been inited")
+		return nil, fmt.Errorf("logkit has been inited")
 	}
 
 	if name != "" {
 		logName = name
 	} else {
-		return fmt.Errorf("log name must not be empty")
+		return nil, fmt.Errorf("log name must not be empty")
 	}
+
+	if logWriter == nil && channel == FIlE {
+		if logPath == "" {
+			logPath = "/data/logs/" + logName + ".log"
+		}
+		logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 4*1024)
+	}
+	if logWriter == nil && channel == SYSLOG {
+		logWriter, _ = NewSyslogWriter("", "", level, logName)
+	}
+	inited = true
 
 	logLevel = level
 	channel = _channel
 	alsoStdout = _alsoStdout
 	withCaller = _withCaller
-	return nil
+	return logWriter, nil
 }
 
 func SetPath(path string) {
@@ -116,24 +126,16 @@ func format(level Level, msg string) string {
 	}
 }
 
-func write(level Level, msg string) {
+func write(level Level, msg string) (err error) {
 	if !inited {
-		if logWriter == nil && channel == FIlE {
-			if logPath == "" {
-				logPath = "/data/logs/" + logName + ".log"
-			}
-			logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 256*1024)
-		}
-		if logWriter == nil && channel == SYSLOG {
-			logWriter, _ = NewSyslogWriter("", "", level, logName)
-		}
-		inited = true
+		return fmt.Errorf("logkit has been inited")
 	}
 	messageStr := format(level, msg)
-	logWriter.Write(level, messageStr)
+	_, err = logWriter.Write([]byte(messageStr))
 	if alsoStdout {
 		fmt.Print(messageStr)
 	}
+	return
 }
 
 func level() Level {

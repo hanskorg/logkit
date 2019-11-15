@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -67,11 +68,11 @@ func (w *mFileLogger) putBuffer(b *bufferNode) {
 	w.freeListMu.Unlock()
 }
 
-func (w *mFileLogger) Exit() {
-	w.flush()
+func (w *mFileLogger) Close() error {
+	return w.flush()
 }
 
-func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize uint64, bufferSize int) Writer {
+func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize uint64, bufferSize int) io.Writer {
 	writer := &mFileLogger{
 		filepath:      path,
 		name:          name,
@@ -89,15 +90,19 @@ func (w *mFileLogger) flushDaemon() {
 	}
 }
 
-func (w *mFileLogger) flush() {
-	w.writer.Flush()
-	w.writer.Sync()
+func (w *mFileLogger) flush() (err error) {
+	err = w.writer.Flush()
+	if err != nil {
+		return
+	}
+	err = w.writer.Sync()
+	return
 }
 
-func (w *mFileLogger) Write(level Level, msg string) {
+func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
 
 	buf := w.getBuffer()
-	buf.WriteString(msg)
+	buf.Write(msg)
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -113,14 +118,13 @@ func (w *mFileLogger) Write(level Level, msg string) {
 		writer = w.writer
 	}
 
-	if err := writer.checkRotate(time.Now()); err != nil {
+	if err = writer.checkRotate(time.Now()); err != nil {
 		fmt.Println("[logkit] check rotate err: " + err.Error())
 		return
 	}
 
-	writer.Write(buf.Bytes())
 	w.putBuffer(buf)
-
+	return 	writer.Write(buf.Bytes())
 }
 
 func (bufferW *bufferWriter) Write(p []byte) (int, error) {

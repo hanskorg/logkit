@@ -1,6 +1,8 @@
 package logkit
 
-import "log/syslog"
+import (
+	"log/syslog"
+)
 
 type SyslogWriter struct {
 	network  string
@@ -45,25 +47,11 @@ func NewSyslogWriter(network, raddr string, level Level, tag string) (Writer, er
 	return object, nil
 }
 
-func (self *SyslogWriter) Write(level Level, msg string) {
-
-	switch level {
-	case LevelFatal:
-		self.writer.Crit(msg)
-	case LevelError:
-		self.writer.Err(msg)
-	case LevelWarn:
-		self.writer.Warning(msg)
-	case LevelInfo:
-		self.writer.Info(msg)
-	case LevelDebug:
-		self.writer.Debug(msg)
-	default:
-		self.writer.Write([]byte(msg))
-	}
+func (self *SyslogWriter) Write(msg []byte) (int, error) {
+	return self.writer.Write([]byte(msg))
 }
 
-func (self *SyslogWriter) Exit() {
+func (self *SyslogWriter) Close() error{
 	// ignore the error return code
-	self.writer.Close()
+	return self.writer.Close()
 }
