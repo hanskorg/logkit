@@ -1,0 +1,10 @@
+check:
+  tags:
+    - k8s
+  stage: build
+  only:
+    - branches
+  except:
+    - beta
+  script:
+    - go test
