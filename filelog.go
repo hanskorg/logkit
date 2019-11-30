@@ -79,12 +79,6 @@ func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize
 		flushInterval: flushInterval,
 		fileSplitSize: fileSplitSize,
 		bufferSize:    bufferSize,
-		writer: &bufferWriter{
-			logPath:     path,
-			logName:     name,
-			maxFileSize: fileSplitSize,
-			bufferSize:  bufferSize,
-		},
 	}
 	go writer.flushDaemon()
 	return writer
@@ -97,6 +91,9 @@ func (w *mFileLogger) flushDaemon() {
 }
 
 func (w *mFileLogger) flush() (err error) {
+	if w.writer == nil {
+		return
+	}
 	err = w.writer.Flush()
 	if err != nil {
 		return
@@ -112,12 +109,25 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if err = w.writer.checkRotate(time.Now()); err != nil {
+	writer := w.writer
+
+	if writer == nil {
+		w.writer = &bufferWriter{
+			logPath:     w.filepath,
+			logName:     w.name,
+			maxFileSize: w.fileSplitSize,
+			bufferSize:  w.bufferSize,
+		}
+		writer = w.writer
+	}
+
+	if err = writer.checkRotate(time.Now()); err != nil {
 		fmt.Println("[logkit] check rotate err: " + err.Error())
 		return
 	}
+
 	w.putBuffer(buf)
-	return 	w.writer.Write(buf.Bytes())
+	return 	writer.Write(buf.Bytes())
 }
 
 func (bufferW *bufferWriter) Write(p []byte) (int, error) {
