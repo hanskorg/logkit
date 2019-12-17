@@ -118,18 +118,18 @@ func format(level Level, msg string) string {
 		pc, file, line, _ = runtime.Caller(3)
 		switch withCaller {
 		case FullPATHFunc:
-			context = fmt.Sprintf("%s:%03d::%s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%s:%03d::%30s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePathFunc:
-			context = fmt.Sprintf("%s:%03d::%s",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%s:%03d::%30s",   path.Base(file), line,  path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePath:
 			context = fmt.Sprintf("%s:%03d",   path.Base(file), line)
 		default:
 			context = fmt.Sprintf("%s:%03d",   path.Base(file), line)
 		}
 
-		return fmt.Sprintf("%s\t[%3s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
+		return fmt.Sprintf("%s\t[%4s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
-		return fmt.Sprintf("%s\t[%3s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
+		return fmt.Sprintf("%s\t[%4s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
 }
 
