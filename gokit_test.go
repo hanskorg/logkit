@@ -1,7 +1,6 @@
 package logkit
 
 import (
-	"flag"
 	"fmt"
 	"strconv"
 	"testing"
@@ -9,13 +8,14 @@ import (
 )
 
 func init()  {
-	var l Level
-	flag.Int("level", int(l) , "l")
-	flag.Parse()
+	//var l Level
+	//flag.Int("level", int(l) , "l")
+	//flag.Parse()
 }
 
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
+	SetPath("test.log")
 	Init(FIlE, "test", LevelDebug, true, BasePath)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

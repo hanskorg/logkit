@@ -127,9 +127,9 @@ func format(level Level, msg string) string {
 			context = fmt.Sprintf("%s:%03d",   path.Base(file), line)
 		}
 
-		return fmt.Sprintf("%s\t[%3s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
+		return fmt.Sprintf("%s\t[%4s]\t%-20.64s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
-		return fmt.Sprintf("%s\t[%3s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
+		return fmt.Sprintf("%s\t[%4s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
 }
 
