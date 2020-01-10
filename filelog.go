@@ -91,6 +91,9 @@ func (w *mFileLogger) flushDaemon() {
 }
 
 func (w *mFileLogger) flush() (err error) {
+	if w.writer == nil {
+		return
+	}
 	err = w.writer.Flush()
 	if err != nil {
 		return
