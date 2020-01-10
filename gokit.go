@@ -85,7 +85,10 @@ func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCal
 		if logPath == "" {
 			logPath = "/data/logs/" + logName + ".log"
 		}
-		logWriter = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 4*1024)
+		logWriter, err  = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 4*1024)
+		if err != nil {
+			return
+		}
 	}
 	if logWriter == nil && channel == SYSLOG {
 		logWriter, _ = NewSyslogWriter("", "", level, logName)

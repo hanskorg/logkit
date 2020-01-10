@@ -1,7 +1,6 @@
 package logkit
 
 import (
-	"flag"
 	"fmt"
 	"strconv"
 	"testing"
@@ -9,14 +8,14 @@ import (
 )
 
 func init()  {
-	var l Level
-	flag.Int("level", int(l) , "l")
-	flag.Parse()
+
 }
 
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
-	Init(FIlE, "test", LevelDebug, true, BasePath)
+	SetPath("/")
+	_, err := Init(FIlE, "test", LevelDebug, true, BasePath)
+	fmt.Printf("===%s", err)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		Info("test " + strconv.FormatInt(int64(i), 10))
