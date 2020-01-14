@@ -154,6 +154,9 @@ func GetWriter() io.Closer {
 }
 
 func Exit() {
+	if logWriter == nil {
+		return
+	}
 	logWriter.(io.Closer).Close()
 }
 
