@@ -79,7 +79,7 @@ func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize
 		flushInterval: flushInterval,
 		fileSplitSize: fileSplitSize,
 		bufferSize:    bufferSize,
-		writer:        &bufferWriter{
+		writer: &bufferWriter{
 			logPath:     path,
 			logName:     name,
 			maxFileSize: fileSplitSize,
@@ -112,7 +112,7 @@ func (w *mFileLogger) flush() (err error) {
 	return
 }
 
-func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
+func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 
 	buf := w.getBuffer()
 	buf.Write(msg)
@@ -137,7 +137,7 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
 	}
 
 	w.putBuffer(buf)
-	return 	writer.Write(buf.Bytes())
+	return writer.Write(buf.Bytes())
 }
 
 func (bufferW *bufferWriter) Write(p []byte) (int, error) {

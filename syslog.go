@@ -51,7 +51,7 @@ func (self *SyslogWriter) Write(msg []byte) (int, error) {
 	return self.writer.Write([]byte(msg))
 }
 
-func (self *SyslogWriter) Close() error{
+func (self *SyslogWriter) Close() error {
 	// ignore the error return code
 	return self.writer.Close()
 }

@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-func init()  {
-
-}
-
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
 	SetPath("/")
@@ -53,5 +49,5 @@ func TestBuffer(t *testing.T) {
 	//Exit()
 }
 
-func TestFlag(t *testing.T)  {
+func TestFlag(t *testing.T) {
 }
