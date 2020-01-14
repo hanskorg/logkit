@@ -157,19 +157,23 @@ func Exit() {
 
 func init() {
 	flag.Var(&logLevel, "log.level", "log level, default `INFO`, it can be `DEBUG, INFO, WARN, ERROR, FATAL`")
-	flag.Var(&withCaller, "log.withcaller", "call context, by default filename and func name, it can be `file, file_func, full`")
 	flag.Var(&channel, "log.channel", "write to , it can be `file syslog`")
+	flag.Var(&withCaller, "log.withcaller", "call context, by default filename and func name, it can be `file, file_func, full`")
 
 	flag.BoolVar(&alsoStdout, "log.alsostdout", false, "log out to stand error as well, default `false`")
 	flag.StringVar(&logName, "log.name", "", "log name, by default log will out to `/data/logs/{name}.log`")
 	flag.BoolVar(&auto, "log.autoinit", true, "log will be init automatic")
-	if auto {
-		println("----", logLevel)
-		_, err := Init(channel, logName, logLevel, alsoStdout, withCaller)
-		if err != nil {
-			println("logkit init fail, ", err.Error())
+	go func() {
+		for {
+			if flag.Parsed() {
+				_, err := Init(channel, logName, logLevel, alsoStdout, withCaller)
+				if err != nil {
+					println("logkit init fail, ", err.Error())
+				}
+				break
+			}
 		}
-	}
+	}()
 }
 
 func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller Caller) (writer io.Writer, err error) {
