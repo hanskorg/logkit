@@ -12,16 +12,18 @@ import (
 )
 
 var (
-	inited       bool
-	auto         bool
-	logWriter    io.Writer
-	logLevel     = LevelInfo
-	logLevelName string
-	logName      string
-	logPath      string
-	channel      Channel
-	alsoStdout   bool
-	withCaller   Caller
+	inited        bool
+	auto          bool
+	logWriter     io.Writer
+	flushInterval time.Duration
+	fileSplitSize uint64
+	logLevel      = LevelInfo
+	logLevelName  string
+	logName       string
+	logPath       string
+	channel       Channel
+	alsoStdout    bool
+	withCaller    Caller
 
 	levelToNames = map[Level]string{
 		LevelFatal: "FATAL",
@@ -158,53 +160,36 @@ func Exit() {
 func init() {
 	flag.Var(&logLevel, "log.level", "log level, default `INFO`, it can be `DEBUG, INFO, WARN, ERROR, FATAL`")
 	flag.Var(&channel, "log.channel", "write to , it can be `file syslog`")
-	flag.Var(&withCaller, "log.withcaller", "call context, by default filename and func name, it can be `file, file_func, full`")
+	flag.Var(&withCaller, "log.withCaller", "call context, by default filename and func name, it can be `file, file_func, full`")
 
-	flag.BoolVar(&alsoStdout, "log.alsostdout", false, "log out to stand error as well, default `false`")
-	flag.StringVar(&logName, "log.name", "", "log name, by default log will out to `/data/logs/{name}.log`")
-	flag.BoolVar(&auto, "log.autoinit", true, "log will be init automatic")
-	go func() {
-		for {
-			if flag.Parsed() {
-				_, err := Init(channel, logName, logLevel, alsoStdout, withCaller)
-				if err != nil {
-					println("logkit init fail, ", err.Error())
-				}
-				break
-			}
-		}
-	}()
+	flag.BoolVar(&alsoStdout, "log.alsoStdout", false, "log out to stand error as well, default `false`")
+	flag.StringVar(&logName, "log.name", "log", "log name, by default log will out to `/data/logs/{name}.log`")
+	flag.BoolVar(&auto, "log.autoInit", true, "log will be init automatic")
+	flag.DurationVar(&flushInterval, "log.interval", time.Second*5, "duration time on flush to disk")
+	flag.Uint64Var(&fileSplitSize, "log.split", uint64(1204*1024*1800), "log fail split on bytes")
 }
 
-func Init(_channel Channel, name string, level Level, _alsoStdout bool, _withCaller Caller) (writer io.Writer, err error) {
+func Init() (writer io.Writer, err error) {
 	if inited {
 		return nil, fmt.Errorf("logkit has been inited")
 	}
 
-	if name != "" {
-		logName = name
-	} else {
+	if logName == "" {
 		return nil, fmt.Errorf("log name must not be empty")
 	}
-
 	if logWriter == nil && channel == FIlE {
 		if logPath == "" {
 			logPath = "/data/logs/" + logName + ".log"
 		}
-		logWriter, err = NewFileLogger(logPath, logName, time.Second*5, 1204*1024*1800, 4*1024)
+		logWriter, err = NewFileLogger(logPath, logName, flushInterval, fileSplitSize, 4*1024)
 		if err != nil {
 			return
 		}
 	}
 	if logWriter == nil && channel == SYSLOG {
-		logWriter, _ = NewSyslogWriter("", "", level, logName)
+		logWriter, _ = NewSyslogWriter("", "", logLevel, logName)
 	}
 	inited = true
-
-	logLevel = level
-	channel = _channel
-	alsoStdout = _alsoStdout
-	withCaller = _withCaller
 	return logWriter, nil
 }
 
