@@ -72,16 +72,26 @@ func (w *mFileLogger) Close() error {
 	return w.flush()
 }
 
-func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize uint64, bufferSize int) io.Writer {
-	writer := &mFileLogger{
+func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize uint64, bufferSize int) (writer io.Writer, err error) {
+	writer = &mFileLogger{
 		filepath:      path,
 		name:          name,
 		flushInterval: flushInterval,
 		fileSplitSize: fileSplitSize,
 		bufferSize:    bufferSize,
+		writer: &bufferWriter{
+			logPath:     path,
+			logName:     name,
+			maxFileSize: fileSplitSize,
+			bufferSize:  bufferSize,
+		},
 	}
-	go writer.flushDaemon()
-	return writer
+	err = writer.(*mFileLogger).writer.rotate(time.Now(), 0)
+	if err != nil {
+		return
+	}
+	go writer.(*mFileLogger).flushDaemon()
+	return
 }
 
 func (w *mFileLogger) flushDaemon() {
@@ -102,7 +112,7 @@ func (w *mFileLogger) flush() (err error) {
 	return
 }
 
-func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
+func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 
 	buf := w.getBuffer()
 	buf.Write(msg)
@@ -127,7 +137,7 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error)  {
 	}
 
 	w.putBuffer(buf)
-	return 	writer.Write(buf.Bytes())
+	return writer.Write(buf.Bytes())
 }
 
 func (bufferW *bufferWriter) Write(p []byte) (int, error) {
