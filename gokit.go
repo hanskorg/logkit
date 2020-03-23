@@ -149,8 +149,8 @@ type Writer interface {
 	Close() error
 }
 
-func GetWriter() io.Closer {
-	return logWriter.(io.Closer)
+func GetWriter() io.Writer {
+	return logWriter
 }
 
 func Exit() {
