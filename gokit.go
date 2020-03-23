@@ -149,8 +149,11 @@ type Writer interface {
 	Close() error
 }
 
-func GetWriter() io.Writer {
-	return logWriter
+func GetWriter()( io.Writer, error) {
+	if logWriter == nil {
+		return nil, fmt.Errorf("logkit not inited")
+	}
+	return logWriter, nil
 }
 
 func Exit() {
