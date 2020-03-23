@@ -115,10 +115,9 @@ func (w *mFileLogger) flush() (err error) {
 func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 
 	buf := w.getBuffer()
-	buf.Write(msg)
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
+	buf.Write(msg)
 	writer := w.writer
 
 	if writer == nil {

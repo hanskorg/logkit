@@ -10,7 +10,7 @@ import (
 func BenchmarkGoKit(b *testing.B) {
 	defer Exit()
 	SetPath("/")
-	_, err := Init(FIlE, "test", LevelDebug, true, BasePath)
+	_, err := Init()
 	fmt.Printf("===%s", err)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
