@@ -149,8 +149,11 @@ type Writer interface {
 	Close() error
 }
 
-func GetWriter() io.Closer {
-	return logWriter.(io.Closer)
+func GetWriter()( io.Writer, error) {
+	if logWriter == nil {
+		return nil, fmt.Errorf("logkit not inited")
+	}
+	return logWriter, nil
 }
 
 func Exit() {
@@ -170,6 +173,15 @@ func init() {
 	flag.BoolVar(&auto, "log.autoInit", true, "log will be init automatic")
 	flag.DurationVar(&flushInterval, "log.interval", time.Second*5, "duration time on flush to disk")
 	flag.Uint64Var(&fileSplitSize, "log.split", uint64(1204*1024*1800), "log fail split on bytes")
+}
+
+//SetDebug set logger debug output
+func SetDebug(debug bool) {
+	if debug {
+		alsoStdout = true
+		withCaller = BasePathFunc
+		logLevel   = LevelDebug
+	}
 }
 
 func Init() (writer io.Writer, err error) {
@@ -215,9 +227,9 @@ func format(level Level, msg string) string {
 		pc, file, line, _ = runtime.Caller(3)
 		switch withCaller {
 		case FullPATHFunc:
-			context = fmt.Sprintf("%s:%03d::%30s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%s:%03d::%-30s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePathFunc:
-			context = fmt.Sprintf("%s:%03d::%30s", path.Base(file), line, path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%s:%03d::%-15s", path.Base(file), line, path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePath:
 			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
 		default:
@@ -231,6 +243,12 @@ func format(level Level, msg string) string {
 }
 
 func write(level Level, msg string) (err error) {
+	if !flag.Parsed() {
+		return fmt.Errorf("logkit write must been flag parsed")
+	}
+	if auto && !inited {
+		Init()
+	}
 	if !inited {
 		return fmt.Errorf("logkit has been inited")
 	}
