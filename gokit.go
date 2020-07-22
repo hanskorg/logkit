@@ -26,7 +26,7 @@ var (
 	alsoStdout    bool
 	withCaller    Caller
 	stdOut        io.Writer
-	levelToNames = map[Level]string{
+	levelToNames  = map[Level]string{
 		LevelFatal: "FATAL",
 		LevelError: "ERROR",
 		LevelWarn:  "WARN",
@@ -155,7 +155,7 @@ type Writer interface {
 	Close() error
 }
 
-func GetWriter()( io.Writer, error) {
+func GetWriter() (io.Writer, error) {
 	if logWriter == nil {
 		return nil, fmt.Errorf("logkit not inited")
 	}
@@ -186,7 +186,7 @@ func SetDebug(debug bool) {
 	if debug {
 		alsoStdout = true
 		withCaller = BasePathFunc
-		logLevel   = LevelDebug
+		logLevel = LevelDebug
 	}
 }
 
@@ -212,6 +212,13 @@ func Init() (writer io.Writer, err error) {
 	}
 	if logWriter == nil && channel == STDOUT {
 		logWriter = os.Stdout
+	}
+	if alsoStdout {
+		if channel == STDOUT {
+			stdOut = logWriter
+		} else {
+			stdOut = os.Stdout
+		}
 	}
 	inited = true
 	return logWriter, nil
