@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"runtime"
 	"strconv"
@@ -24,7 +25,7 @@ var (
 	channel       Channel
 	alsoStdout    bool
 	withCaller    Caller
-
+	stdOut        io.Writer
 	levelToNames = map[Level]string{
 		LevelFatal: "FATAL",
 		LevelError: "ERROR",
@@ -82,6 +83,7 @@ const (
 	FIlE Channel = iota
 	SYSLOG
 	KAFKA
+	STDOUT
 )
 
 func (c *Channel) String() string {
@@ -90,15 +92,19 @@ func (c *Channel) String() string {
 		return "file"
 	case SYSLOG:
 		return "syslog"
+	case STDOUT:
+		return "none"
 	}
 	return "file"
 }
 func (c *Channel) Set(value string) error {
-	switch value {
+	switch strings.ToLower(value) {
 	case "file":
 		*c = FIlE
 	case "syslog":
 		*c = SYSLOG
+	case "none":
+		*c = STDOUT
 	default:
 		*c = FIlE
 	}
@@ -194,7 +200,7 @@ func Init() (writer io.Writer, err error) {
 	}
 	if logWriter == nil && channel == FIlE {
 		if logPath == "" {
-			logPath = "/data/logs/" + logName + ".log"
+			logPath = "/var/log/" + logName + ".log"
 		}
 		logWriter, err = NewFileLogger(logPath, logName, flushInterval, fileSplitSize, 4*1024)
 		if err != nil {
@@ -203,6 +209,9 @@ func Init() (writer io.Writer, err error) {
 	}
 	if logWriter == nil && channel == SYSLOG {
 		logWriter, _ = NewSyslogWriter("", "", logLevel, logName)
+	}
+	if logWriter == nil && channel == STDOUT {
+		logWriter = os.Stdout
 	}
 	inited = true
 	return logWriter, nil
@@ -235,7 +244,6 @@ func format(level Level, msg string) string {
 		default:
 			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
 		}
-
 		return fmt.Sprintf("%s\t[%4s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
 		return fmt.Sprintf("%s\t[%4s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
@@ -255,7 +263,7 @@ func write(level Level, msg string) (err error) {
 	messageStr := format(level, msg)
 	_, err = logWriter.Write([]byte(messageStr))
 	if alsoStdout {
-		fmt.Print(messageStr)
+		stdOut.Write([]byte(messageStr))
 	}
 	return
 }
