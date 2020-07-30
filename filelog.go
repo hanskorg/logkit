@@ -142,6 +142,9 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 func (bufferW *bufferWriter) Write(p []byte) (int, error) {
 	n, err := bufferW.Writer.Write(p)
 	bufferW.byteSize += uint64(n)
+	if bufferW.Buffered() >= bufferW.bufferSize {
+		bufferW.Writer.Flush()
+	}
 	return n, err
 }
 
