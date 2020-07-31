@@ -197,7 +197,7 @@ func SetPath(path string) {
 // SetName set logname
 // set before inited
 func SetName(name string) {
-	name = name
+	logName = name
 }
 // SetWithCaller set caller flag
 // set before inited
