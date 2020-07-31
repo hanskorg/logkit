@@ -189,6 +189,31 @@ func SetDebug(debug bool) {
 		logLevel = LevelDebug
 	}
 }
+// SetPath set log filename
+// set before inited
+func SetPath(path string) {
+	logPath = path
+}
+// SetName set logname
+// set before inited
+func SetName(name string) {
+	name = name
+}
+// SetWithCaller set caller flag
+// set before inited
+func SetWithCaller( withWho string) {
+	withCaller.Set(withWho)
+}
+// SetAlsoStdout set stdout or not
+// set before inited
+func SetAlsoStdout( stdout bool) {
+	alsoStdout = stdout
+}
+// SetChannel set channel
+// set before inited
+func SetChannel( channelName string) {
+	channel.Set(channelName)
+}
 
 func Init() (writer io.Writer, err error) {
 	if inited {
@@ -224,9 +249,6 @@ func Init() (writer io.Writer, err error) {
 	return logWriter, nil
 }
 
-func SetPath(path string) {
-	logPath = path
-}
 func getLevelName(level Level) string {
 	levelName, _ := levelToNames[level]
 	return levelName
