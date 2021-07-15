@@ -101,7 +101,7 @@ func (w *mFileLogger) flushDaemon() {
 }
 
 func (w *mFileLogger) flush() (err error) {
-	if w.writer == nil {
+	if w.writer == nil || w.writer.Writer == nil {
 		return
 	}
 	err = w.writer.Flush()
@@ -139,8 +139,11 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 	return writer.Write(buf.Bytes())
 }
 
-func (bufferW *bufferWriter) Write(p []byte) (int, error) {
-	n, err := bufferW.Writer.Write(p)
+func (bufferW *bufferWriter) Write(p []byte) (n int, err error) {
+	bufferW.Writer.Available()
+
+	n, err = bufferW.Writer.Write(p)
+
 	bufferW.byteSize += uint64(n)
 	if bufferW.Buffered() >= bufferW.bufferSize {
 		bufferW.Writer.Flush()
@@ -167,20 +170,22 @@ func (bufferW *bufferWriter) checkRotate(now time.Time) error {
 	return nil
 }
 
-func (bufferW *bufferWriter) write(p []byte) (int, error) {
-	n, err := bufferW.Writer.Write(p)
-	bufferW.byteSize += uint64(n)
-	return n, err
-}
+func (bufferW *bufferWriter) rotate(oldTime time.Time, slot int) (err error) {
+	var (
+		newFileName      string
+		year, month, day = oldTime.Date()
+		fileInfo         os.FileInfo
+	)
 
-func (bufferW *bufferWriter) rotate(oldTime time.Time, slot int) error {
 	if bufferW.file != nil {
-		bufferW.Flush()
-		bufferW.file.Close()
-		var newFileName string
-
-		year, month, day := oldTime.Date()
-
+		err = bufferW.Flush()
+		if err != nil {
+			return
+		}
+		err = bufferW.file.Close()
+		if err != nil {
+			return
+		}
 		if slot > 0 {
 			newFileName = fmt.Sprintf("%s-%02d%02d%02d.%02d", bufferW.logPath, year, month, day, slot-1)
 		} else {
@@ -192,7 +197,10 @@ func (bufferW *bufferWriter) rotate(oldTime time.Time, slot int) error {
 	if err := bufferW.openFile(bufferW.logPath, bufferW.logName); err != nil {
 		return fmt.Errorf("rotate file error: %#v", err)
 	}
-	fileInfo, _ := bufferW.file.Stat()
+	fileInfo, err = bufferW.file.Stat()
+	if err != nil {
+		return
+	}
 	bufferW.byteSize = uint64(fileInfo.Size())
 	bufferW.Writer = bufio.NewWriterSize(bufferW.file, bufferW.bufferSize)
 	bufferW.slot = slot
@@ -202,9 +210,10 @@ func (bufferW *bufferWriter) rotate(oldTime time.Time, slot int) error {
 	return nil
 }
 
-func (bufferW *bufferWriter) openFile(fileName, logName string) error {
-	var file *os.File
-	var err error
+func (bufferW *bufferWriter) openFile(fileName, logName string) (err error) {
+	var (
+		file *os.File
+	)
 	for {
 		file, err = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err == nil {
