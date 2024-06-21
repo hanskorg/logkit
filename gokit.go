@@ -151,7 +151,7 @@ func (c *Caller) Set(value string) error {
 type Writer interface {
 	//Write 写日志
 	Write(msg []byte) (int, error)
-	//Exit 日志退出
+	//Close 日志退出
 	Close() error
 }
 
