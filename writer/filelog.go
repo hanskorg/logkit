@@ -1,4 +1,4 @@
-package logkit
+package writer
 
 import (
 	"bufio"
@@ -141,9 +141,7 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 
 func (bufferW *bufferWriter) Write(p []byte) (n int, err error) {
 	bufferW.Writer.Available()
-
 	n, err = bufferW.Writer.Write(p)
-
 	bufferW.byteSize += uint64(n)
 	if bufferW.Buffered() >= bufferW.bufferSize {
 		bufferW.Writer.Flush()

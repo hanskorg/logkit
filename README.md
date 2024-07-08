@@ -1,9 +1,7 @@
 #### Usage
 ```
 	
-    import git.qietv.work/public/logkit
-    
-    
+
     logkit.Init(FIlE, "test", logkit.LevelDebug)
     defer logkit.Exit()
     

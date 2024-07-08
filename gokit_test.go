@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func BenchmarkGoKit(b *testing.B) {
+func BenchmarkKit(b *testing.B) {
 	defer Exit()
 	SetPath("/")
 	_, err := Init()

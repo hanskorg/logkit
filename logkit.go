@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	w "github.com/hanskorg/logkit/writer"
 )
 
 var (
@@ -22,7 +24,7 @@ var (
 	logLevelName  string
 	logName       string
 	logPath       string
-	channel       Channel
+	channel       w.Channel
 	alsoStdout    bool
 	withCaller    Caller
 	stdOut        io.Writer
@@ -36,7 +38,7 @@ var (
 	}
 )
 
-//Level 日志等级
+// Level 日志等级
 type Level int
 
 const (
@@ -73,40 +75,6 @@ func (l *Level) Set(value string) error {
 	}
 	if *l == Default {
 		*l = LevelDebug
-	}
-	return nil
-}
-
-type Channel byte
-
-const (
-	FIlE Channel = iota
-	SYSLOG
-	KAFKA
-	STDOUT
-)
-
-func (c *Channel) String() string {
-	switch *c {
-	case FIlE:
-		return "file"
-	case SYSLOG:
-		return "syslog"
-	case STDOUT:
-		return "none"
-	}
-	return "file"
-}
-func (c *Channel) Set(value string) error {
-	switch strings.ToLower(value) {
-	case "file":
-		*c = FIlE
-	case "syslog":
-		*c = SYSLOG
-	case "none":
-		*c = STDOUT
-	default:
-		*c = FIlE
 	}
 	return nil
 }
@@ -148,13 +116,6 @@ func (c *Caller) Set(value string) error {
 	return nil
 }
 
-type Writer interface {
-	//Write 写日志
-	Write(msg []byte) (int, error)
-	//Close 日志退出
-	Close() error
-}
-
 func GetWriter() (io.Writer, error) {
 	if logWriter == nil {
 		return nil, fmt.Errorf("logkit not inited")
@@ -169,19 +130,19 @@ func Exit() {
 	logWriter.(io.Closer).Close()
 }
 
-func init() {
-	flag.Var(&logLevel, "log.level", "log level, default `INFO`, it can be `DEBUG, INFO, WARN, ERROR, FATAL`")
-	flag.Var(&channel, "log.channel", "write to , it can be `file syslog`")
-	flag.Var(&withCaller, "log.withCaller", "call context, by default filename and func name, it can be `file, file_func, full`")
+// func init() {
+// 	flag.Var(&logLevel, "log.level", "log level, default `INFO`, it can be `DEBUG, INFO, WARN, ERROR, FATAL`")
+// 	flag.Var(&channel, "log.channel", "write to , it can be `file syslog`")
+// 	flag.Var(&withCaller, "log.withCaller", "call context, by default filename and func name, it can be `file, file_func, full`")
 
-	flag.BoolVar(&alsoStdout, "log.alsoStdout", false, "log out to stand error as well, default `false`")
-	flag.StringVar(&logName, "log.name", "log", "log name, by default log will out to `/data/logs/{name}.log`")
-	flag.BoolVar(&auto, "log.autoInit", true, "log will be init automatic")
-	flag.DurationVar(&flushInterval, "log.interval", time.Second*5, "duration time on flush to disk")
-	flag.Uint64Var(&fileSplitSize, "log.split", uint64(1204*1024*1800), "log fail split on bytes")
-}
+// 	flag.BoolVar(&alsoStdout, "log.alsoStdout", false, "log out to stand error as well, default `false`")
+// 	flag.StringVar(&logName, "log.name", "log", "log name, by default log will out to `/data/logs/{name}.log`")
+// 	flag.BoolVar(&auto, "log.autoInit", true, "log will be init automatic")
+// 	flag.DurationVar(&flushInterval, "log.interval", time.Second*5, "duration time on flush to disk")
+// 	flag.Uint64Var(&fileSplitSize, "log.split", uint64(1204*1024*1800), "log fail split on bytes")
+// }
 
-//SetDebug set logger debug output
+// SetDebug set logger debug output
 func SetDebug(debug bool) {
 	if debug {
 		alsoStdout = true
@@ -189,30 +150,40 @@ func SetDebug(debug bool) {
 		logLevel = LevelDebug
 	}
 }
+
 // SetPath set log filename
 // set before inited
 func SetPath(path string) {
 	logPath = path
 }
+
 // SetName set logname
 // set before inited
 func SetName(name string) {
 	logName = name
 }
+
 // SetWithCaller set caller flag
 // set before inited
-func SetWithCaller( withWho string) {
+func SetWithCaller(withWho string) {
 	withCaller.Set(withWho)
 }
+
 // SetAlsoStdout set stdout or not
 // set before inited
-func SetAlsoStdout( stdout bool) {
+func SetAlsoStdout(stdout bool) {
 	alsoStdout = stdout
 }
+
 // SetChannel set channel
 // set before inited
-func SetChannel( channelName string) {
+func SetChannel(channelName string) {
 	channel.Set(channelName)
+}
+
+// SetLevel set level
+func SetLevel(level Level) {
+	logLevel = level
 }
 
 func Init() (writer io.Writer, err error) {
@@ -227,6 +198,7 @@ func Init() (writer io.Writer, err error) {
 		if logPath == "" {
 			logPath = "/var/log/" + logName + ".log"
 		}
+
 		logWriter, err = NewFileLogger(logPath, logName, flushInterval, fileSplitSize, 4*1024)
 		if err != nil {
 			return

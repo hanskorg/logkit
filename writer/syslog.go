@@ -1,4 +1,4 @@
-package logkit
+package writer
 
 import (
 	"log/syslog"
