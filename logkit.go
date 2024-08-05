@@ -36,6 +36,31 @@ var (
 	}
 )
 
+type Logger struct {
+	level   Level
+	writer  Writer
+	logName string
+	logPath string
+}
+
+func (*Logger) Debug() {
+
+}
+func (*Logger) Debugf() {
+
+}
+
+func NewLogger(options ...Option) *Logger {
+
+	logger := &Logger{
+		level: LevelInfo,
+	}
+	for _, opt := range options {
+		opt(logger)
+	}
+	return logger
+}
+
 func GetWriter() (io.Writer, error) {
 	if logWriter == nil {
 		return nil, fmt.Errorf("logkit not inited")
@@ -99,11 +124,6 @@ func SetAlsoStdout(stdout bool) {
 // set before inited
 func SetChannel(channelName string) {
 	channel.Set(channelName)
-}
-
-// SetLevel set level
-func SetLevel(level Level) {
-	logLevel = level
 }
 
 func Init() (writer io.Writer, err error) {

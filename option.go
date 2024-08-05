@@ -82,3 +82,17 @@ func (c *Caller) Set(value string) error {
 	}
 	return nil
 }
+
+type Option func(*Logger)
+
+func SetLevel(_level *Level) Option {
+	return func(l *Logger) {
+		l.level = _level
+	}
+}
+
+func Name(name string) Option {
+	return func(l *Logger) {
+		l.logName = name
+	}
+}
