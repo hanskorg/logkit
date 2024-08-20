@@ -3,6 +3,7 @@ package logkit
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"net/url"
 	"os"
 	"time"
 )
@@ -24,6 +25,8 @@ type Logger struct {
 	fileSplitSize uint64
 	fileBuffSize  uint64
 	defaultWriter Writer
+	syslogAddr    string
+	name          string
 }
 
 var defaultLogger = &Logger{
@@ -85,6 +88,8 @@ func setupLogger(_logger *Logger, options ...Option) *Logger {
 		withStdout    bool
 		fileWriter    Writer
 		logrusAdapter *logrus.Logger
+		sysLogURL     *url.URL
+		sysLogger     Writer
 	)
 	for _, opt := range options {
 		opt(_logger)
@@ -116,6 +121,17 @@ func setupLogger(_logger *Logger, options ...Option) *Logger {
 				logrusAdapter,
 				logrusAdapter.Level,
 			}
+		}
+		if c == SYSLOG && _logger.syslogAddr != "" {
+			if sysLogURL, e = url.Parse(_logger.syslogAddr); e != nil {
+				println(fmt.Sprintf("logkit new syslog fail, %s", e.Error()))
+				continue
+			}
+			sysLogger, e = NewSyslogWriter(sysLogURL.Scheme, sysLogURL.Host, _logger.level, _logger.name)
+			if e != nil {
+				println(fmt.Sprintf("logkit new syslog fail, %s", e.Error()))
+			}
+			_logger.writers[SYSLOG] = sysLogger
 		}
 
 	}
@@ -153,30 +169,30 @@ func level() Level {
 
 func (l *Logger) Debugs(args ...interface{}) {
 	if l.level <= LevelDebug {
-		write(l, LevelDebug, fmt.Sprintln(args...))
+		write(l, LevelDebug, fmt.Sprint(args...))
 	}
 }
 
 func (l *Logger) Infos(args ...interface{}) {
 	if level() <= LevelInfo {
-		write(l, LevelInfo, fmt.Sprintln(args...))
+		write(l, LevelInfo, fmt.Sprint(args...))
 	}
 }
 
 func (l *Logger) Warns(args ...interface{}) {
 	if level() <= LevelWarn {
-		write(l, LevelWarn, fmt.Sprintln(args...))
+		write(l, LevelWarn, fmt.Sprint(args...))
 	}
 }
 
 func (l *Logger) Errors(args ...interface{}) {
 	if level() <= LevelError {
-		write(l, LevelError, fmt.Sprintln(args...))
+		write(l, LevelError, fmt.Sprint(args...))
 	}
 }
 
 func (l *Logger) Fatal(args ...interface{}) {
-	write(l, LevelFatal, fmt.Sprintln(args...))
+	write(l, LevelFatal, fmt.Sprint(args...))
 	l.Close()
 	os.Exit(1)
 }

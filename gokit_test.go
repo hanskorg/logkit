@@ -16,13 +16,29 @@ func TestStdInfo(t *testing.T) {
 }
 
 func TestFileInfo(t *testing.T) {
-	logger := NewLogger(WithChannel(FIlE), WithChannel(STDOUT))
+	logger := NewLogger(WithChannel(FIlE), WithChannel(STDOUT), SetWithCaller(FullPATHFunc))
 	defer logger.Close()
 	logger.Log(LevelInfo, "this this a test info", "just for test")
 	logger.Log(LevelDebug, "this this a test info", "just for test")
 	logger.Log(LevelWarn, "this this a test info", "just for test")
 	logger.Log(LevelFatal, "this this a test info", "just for test")
 	logger.Log(LevelFatal, "this this a test info", "just for test")
+}
+
+func TestSyslogInfo(t *testing.T) {
+	logger := NewLogger(WithChannel(FIlE), WithChannel(SYSLOG), SetLogName("test"), SetSysLogAddr("udp://localhost:514"), SetWithCaller(FullPATHFunc))
+	defer logger.Close()
+	logger.Log(LevelInfo, "this this a test info", "just for test")
+	logger.Log(LevelDebug, "this this a test info", "just for test")
+	logger.Log(LevelWarn, "this this a test info", "just for test")
+	logger.Log(LevelFatal, "this this a test info", "just for test")
+	logger.Log(LevelFatal, "this this a test info", "just for test")
+}
+
+func TestDefaultLogger(t *testing.T) {
+	defer Close()
+	SetLogger(WithChannel(FIlE), WithChannel(STDOUT), SetLogName("test"), SetWithCaller(BasePath))
+	Infof("this this a test info")
 }
 
 func TestBuffer(t *testing.T) {
@@ -32,7 +48,4 @@ func TestBuffer(t *testing.T) {
 		str += strconv.FormatInt(int64(i), 10)
 	}
 	Infof("test %s --- %s", "1", str)
-}
-
-func TestFlag(t *testing.T) {
 }

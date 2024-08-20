@@ -21,11 +21,11 @@ const (
 var (
 	levelToNames = map[Level]string{
 		LevelFatal: "FATAL",
-		LevelError: "ERROR",
-		LevelWarn:  "WARN",
-		LevelInfo:  "INFO",
-		LevelDebug: "DEBUG",
-		LevelTrace: "TRACE",
+		LevelError: "ERR",
+		LevelWarn:  "WAN",
+		LevelInfo:  "INF",
+		LevelDebug: "DEG",
+		LevelTrace: "TRE",
 	}
 )
 
@@ -175,5 +175,17 @@ func SetFileSplitSize(size uint64) Option {
 func SetFileBuffSize(size uint64) Option {
 	return func(l *Logger) {
 		l.fileBuffSize = size
+	}
+}
+
+func SetSysLogAddr(addr string) Option {
+	return func(l *Logger) {
+		l.syslogAddr = addr
+	}
+}
+
+func SetLogName(name string) Option {
+	return func(l *Logger) {
+		l.name = name
 	}
 }

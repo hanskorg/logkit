@@ -37,7 +37,7 @@ type stdWriter struct {
 }
 
 func (sw *stdWriter) Write(msg []byte) (int, error) {
-	return fmt.Println(string(msg))
+	return fmt.Print(string(msg))
 }
 func (*stdWriter) Close() error {
 	return nil
@@ -54,17 +54,20 @@ func format(level Level, caller Caller, msg string) string {
 		pc, file, line, _ = runtime.Caller(3)
 		switch caller {
 		case FullPATHFunc:
-			context = fmt.Sprintf("%s:%03d::%-30s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
+			if len(file) > 40 {
+				file = file[:40]
+			}
+			context = fmt.Sprintf("%40s:%03d::%s\t", file, line, path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePathFunc:
-			context = fmt.Sprintf("%s:%03d::%-15s", path.Base(file), line, path.Base(runtime.FuncForPC(pc).Name()))
+			context = fmt.Sprintf("%s:%03d::%s\t", path.Base(file), line, path.Base(runtime.FuncForPC(pc).Name()))
 		case BasePath:
-			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
+			context = fmt.Sprintf("%s:%03d\t", path.Base(file), line)
 		default:
 			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
 		}
-		return fmt.Sprintf("%s [%4s] %s %-44s\r", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
+		return fmt.Sprintf("%-23s [%s] %s %s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
 	} else {
-		return fmt.Sprintf("%s [%4s] %-44s\r", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
+		return fmt.Sprintf("%-23s [%s] %s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
 	}
 }
 
