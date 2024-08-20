@@ -1,164 +1,145 @@
 package logkit
 
 import (
-	"flag"
 	"fmt"
-	"io"
+	"github.com/sirupsen/logrus"
 	"os"
-	"path"
-	"runtime"
 	"time"
-
-	w "github.com/hanskorg/logkit/writer"
 )
 
-var (
-	inited        bool
-	auto          bool
-	logWriter     io.Writer
-	flushInterval time.Duration
-	fileSplitSize uint64
-	logLevel      = LevelInfo
-	logLevelName  string
-	logName       string
-	logPath       string
-	channel       w.Channel
-	alsoStdout    bool
-	withCaller    Caller
-	stdOut        io.Writer
-	levelToNames  = map[Level]string{
-		LevelFatal: "FATAL",
-		LevelError: "ERROR",
-		LevelWarn:  "WARN",
-		LevelInfo:  "INFO",
-		LevelDebug: "DEBUG",
-		LevelTrace: "TRACE",
-	}
+const (
+	defaultFlushInterval = time.Second
+	defaultFileSplitSize = uint64(1204 * 1024 * 1800)
+	defaultBuffSize      = 1024 * 4
 )
 
 type Logger struct {
-	level   Level
-	writer  Writer
-	logName string
-	logPath string
+	level         Level
+	writers       map[Channel]Writer
+	logPath       string
+	channels      []Channel
+	caller        Caller
+	adapter       string
+	flushInterval time.Duration
+	fileSplitSize uint64
+	fileBuffSize  uint64
+	defaultWriter Writer
 }
 
-func (*Logger) Debug() {
-
+var defaultLogger = &Logger{
+	level: LevelInfo,
+	writers: map[Channel]Writer{
+		STDOUT: &stdWriter{
+			level:  LevelInfo,
+			caller: BasePath,
+		}},
+	caller:        BasePath,
+	flushInterval: defaultFlushInterval,
+	fileSplitSize: defaultFileSplitSize,
+	fileBuffSize:  defaultBuffSize,
+	logPath:       "./logkit.log",
 }
-func (*Logger) Debugf() {
 
+func (l *Logger) Log(level Level, args ...interface{}) {
+	switch level {
+	case LevelDebug:
+		l.Debugs(args...)
+	case LevelInfo:
+		l.Infos(args...)
+	case LevelWarn:
+		l.Warns(args...)
+	case LevelError:
+		l.Errors(args...)
+	case LevelFatal:
+		l.Fatal(args...)
+	default:
+		l.Debugs(args...)
+	}
 }
 
-func NewLogger(options ...Option) *Logger {
-
-	logger := &Logger{
+func NewLogger(opts ...Option) *Logger {
+	return setupLogger(&Logger{
 		level: LevelInfo,
-	}
+		writers: map[Channel]Writer{
+			STDOUT: &stdWriter{
+				level:  LevelInfo,
+				caller: BasePath,
+			}},
+		caller:        BasePath,
+		flushInterval: defaultFlushInterval,
+		fileSplitSize: defaultFileSplitSize,
+		fileBuffSize:  defaultBuffSize,
+		logPath:       "./logkit.log",
+	}, opts...)
+}
+
+func (l *Logger) Close() {
+	closes(l.writers)
+}
+func SetLogger(opts ...Option) {
+	setupLogger(defaultLogger, opts...)
+}
+func setupLogger(_logger *Logger, options ...Option) *Logger {
+	var (
+		e             error
+		withStdout    bool
+		fileWriter    Writer
+		logrusAdapter *logrus.Logger
+	)
 	for _, opt := range options {
-		opt(logger)
-	}
-	return logger
-}
-
-func GetWriter() (io.Writer, error) {
-	if logWriter == nil {
-		return nil, fmt.Errorf("logkit not inited")
-	}
-	return logWriter, nil
-}
-
-func Exit() {
-	if logWriter == nil {
-		return
-	}
-	logWriter.(io.Closer).Close()
-}
-
-// func init() {
-// 	flag.Var(&logLevel, "log.level", "log level, default `INFO`, it can be `DEBUG, INFO, WARN, ERROR, FATAL`")
-// 	flag.Var(&channel, "log.channel", "write to , it can be `file syslog`")
-// 	flag.Var(&withCaller, "log.withCaller", "call context, by default filename and func name, it can be `file, file_func, full`")
-
-// 	flag.BoolVar(&alsoStdout, "log.alsoStdout", false, "log out to stand error as well, default `false`")
-// 	flag.StringVar(&logName, "log.name", "log", "log name, by default log will out to `/data/logs/{name}.log`")
-// 	flag.BoolVar(&auto, "log.autoInit", true, "log will be init automatic")
-// 	flag.DurationVar(&flushInterval, "log.interval", time.Second*5, "duration time on flush to disk")
-// 	flag.Uint64Var(&fileSplitSize, "log.split", uint64(1204*1024*1800), "log fail split on bytes")
-// }
-
-// SetDebug set logger debug output
-func SetDebug(debug bool) {
-	if debug {
-		alsoStdout = true
-		withCaller = BasePathFunc
-		logLevel = LevelDebug
-	}
-}
-
-// SetPath set log filename
-// set before inited
-func SetPath(path string) {
-	logPath = path
-}
-
-// SetName set logname
-// set before inited
-func SetName(name string) {
-	logName = name
-}
-
-// SetWithCaller set caller flag
-// set before inited
-func SetWithCaller(withWho string) {
-	withCaller.Set(withWho)
-}
-
-// SetAlsoStdout set stdout or not
-// set before inited
-func SetAlsoStdout(stdout bool) {
-	alsoStdout = stdout
-}
-
-// SetChannel set channel
-// set before inited
-func SetChannel(channelName string) {
-	channel.Set(channelName)
-}
-
-func Init() (writer io.Writer, err error) {
-	if inited {
-		return nil, fmt.Errorf("logkit has been inited")
+		opt(_logger)
 	}
 
-	if logName == "" {
-		return nil, fmt.Errorf("log name must not be empty")
-	}
-	if logWriter == nil && channel == FIlE {
-		if logPath == "" {
-			logPath = "/var/log/" + logName + ".log"
+	for _, c := range _logger.channels {
+		if c == STDOUT {
+			withStdout = true
+		}
+		if (c == FIlE || c == LOGRUS) && fileWriter == nil {
+			if fileWriter, e = NewFileLogger(_logger.logPath, _logger.flushInterval, _logger.fileSplitSize, _logger.fileBuffSize); e != nil {
+				println(fmt.Sprintf("logkit new filelogger fail, %s", e.Error()))
+			}
+			if logrusAdapter != nil {
+				logrusAdapter.Out = fileWriter
+			}
+			_logger.defaultWriter = fileWriter
+		}
+		if c == FIlE {
+			_logger.writers[FIlE] = fileWriter
+		}
+		if c == LOGRUS {
+			logrusAdapter = &logrus.Logger{
+				Out:       _logger.defaultWriter,
+				Formatter: new(logrus.TextFormatter),
+			}
+			logrusAdapter.Level, _ = logrus.ParseLevel(_logger.level.String())
+			_logger.writers[LOGRUS] = &logrusWriter{
+				logrusAdapter,
+				logrusAdapter.Level,
+			}
 		}
 
-		logWriter, err = NewFileLogger(logPath, logName, flushInterval, fileSplitSize, 4*1024)
-		if err != nil {
-			return
+	}
+	if !withStdout {
+		delete(_logger.writers, STDOUT)
+	}
+	return _logger
+}
+
+func Close() {
+	closes(defaultLogger.writers)
+}
+func closes(ws map[Channel]Writer) {
+	for c, w := range ws {
+		if e := w.Close(); e != nil {
+			println("logkit writer [%s] close fail, %s", c.String(), e.Error())
 		}
 	}
-	if logWriter == nil && channel == SYSLOG {
-		logWriter, _ = NewSyslogWriter("", "", logLevel, logName)
+}
+func GetWriter(channel Channel) Writer {
+	if w, has := defaultLogger.writers[channel]; has {
+		return w
 	}
-	if logWriter == nil && channel == STDOUT {
-		logWriter = os.Stdout
-	}
-	if alsoStdout {
-		if channel == STDOUT {
-			stdOut = logWriter
-		} else {
-			stdOut = os.Stdout
-		}
-	}
-	inited = true
-	return logWriter, nil
+	return defaultLogger.defaultWriter
 }
 
 func getLevelName(level Level) string {
@@ -166,134 +147,84 @@ func getLevelName(level Level) string {
 	return levelName
 }
 
-func format(level Level, msg string) string {
-	if withCaller != NONE {
-		var (
-			context string
-			pc      uintptr
-			file    string
-			line    int
-		)
-		pc, file, line, _ = runtime.Caller(3)
-		switch withCaller {
-		case FullPATHFunc:
-			context = fmt.Sprintf("%s:%03d::%-30s", file, line, path.Base(runtime.FuncForPC(pc).Name()))
-		case BasePathFunc:
-			context = fmt.Sprintf("%s:%03d::%-15s", path.Base(file), line, path.Base(runtime.FuncForPC(pc).Name()))
-		case BasePath:
-			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
-		default:
-			context = fmt.Sprintf("%s:%03d", path.Base(file), line)
-		}
-		return fmt.Sprintf("%s\t[%4s]\t%s\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), context, msg)
-	} else {
-		return fmt.Sprintf("%s\t[%4s]\t%s\n", time.Now().Format("2006-01-02 15:04:05.999"), getLevelName(level), msg)
-	}
-}
-
-func write(level Level, msg string) (err error) {
-	if !flag.Parsed() {
-		return fmt.Errorf("logkit write must been flag parsed")
-	}
-	if auto && !inited {
-		Init()
-	}
-	if !inited {
-		return fmt.Errorf("logkit has been inited")
-	}
-	messageStr := format(level, msg)
-	_, err = logWriter.Write([]byte(messageStr))
-	if alsoStdout {
-		stdOut.Write([]byte(messageStr))
-	}
-	return
-}
-
 func level() Level {
-	return logLevel
+	return defaultLogger.level
+}
+
+func (l *Logger) Debugs(args ...interface{}) {
+	if l.level <= LevelDebug {
+		write(l, LevelDebug, fmt.Sprintln(args...))
+	}
+}
+
+func (l *Logger) Infos(args ...interface{}) {
+	if level() <= LevelInfo {
+		write(l, LevelInfo, fmt.Sprintln(args...))
+	}
+}
+
+func (l *Logger) Warns(args ...interface{}) {
+	if level() <= LevelWarn {
+		write(l, LevelWarn, fmt.Sprintln(args...))
+	}
+}
+
+func (l *Logger) Errors(args ...interface{}) {
+	if level() <= LevelError {
+		write(l, LevelError, fmt.Sprintln(args...))
+	}
+}
+
+func (l *Logger) Fatal(args ...interface{}) {
+	write(l, LevelFatal, fmt.Sprintln(args...))
+	l.Close()
+	os.Exit(1)
 }
 
 func Debug(str string) {
 	if level() <= LevelDebug {
-		write(LevelDebug, str)
-	}
-}
-
-func Debugs(args ...interface{}) {
-	if level() <= LevelDebug {
-		write(LevelDebug, fmt.Sprintln(args...))
+		write(defaultLogger, LevelDebug, str)
 	}
 }
 
 func Debugf(format string, args ...interface{}) {
 	if level() <= LevelDebug {
-		write(LevelDebug, fmt.Sprintf(format, args...))
+		write(defaultLogger, LevelDebug, fmt.Sprintf(format, args...))
 	}
 }
 
 func Info(str string) {
 	if level() <= LevelInfo {
-		write(LevelInfo, str)
-	}
-}
-
-func Infos(args ...interface{}) {
-	if level() <= LevelInfo {
-		write(LevelInfo, fmt.Sprintln(args...))
+		write(defaultLogger, LevelInfo, str)
 	}
 }
 
 func Infof(format string, args ...interface{}) {
 	if level() <= LevelInfo {
-		write(LevelInfo, fmt.Sprintf(format, args...))
+		write(defaultLogger, LevelInfo, fmt.Sprintf(format, args...))
 	}
 }
 
 func Warn(str string) {
 	if level() <= LevelWarn {
-		write(LevelWarn, str)
-	}
-}
-
-func Warns(args ...interface{}) {
-	if level() <= LevelWarn {
-		write(LevelWarn, fmt.Sprintln(args...))
+		write(defaultLogger, LevelWarn, str)
 	}
 }
 
 func Warnf(format string, args ...interface{}) {
 	if level() <= LevelWarn {
-		write(LevelWarn, fmt.Sprintf(format, args...))
+		write(defaultLogger, LevelWarn, fmt.Sprintf(format, args...))
 	}
 }
 
 func Error(str string) {
 	if level() <= LevelError {
-		write(LevelError, str)
-	}
-}
-
-func Errors(args ...interface{}) {
-	if level() <= LevelError {
-		write(LevelError, fmt.Sprintln(args...))
+		write(defaultLogger, LevelError, str)
 	}
 }
 
 func Errorf(format string, args ...interface{}) {
 	if level() <= LevelError {
-		write(LevelError, fmt.Sprintf(format, args...))
+		write(defaultLogger, LevelError, fmt.Sprintf(format, args...))
 	}
-}
-
-func NewLogWriter(level Level) io.Writer {
-	return &stdWriter{level}
-}
-
-type stdWriter struct {
-	level Level
-}
-
-func (this *stdWriter) Write(data []byte) (int, error) {
-	write(this.level, string(data))
-	return len(data), nil
 }

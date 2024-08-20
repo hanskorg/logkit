@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,12 +20,11 @@ type mFileLogger struct {
 	mu     sync.Mutex
 
 	filepath      string
-	name          string
 	freeList      *bufferNode
 	freeListMu    sync.Mutex
 	flushInterval time.Duration
 	fileSplitSize uint64
-	bufferSize    int
+	bufferSize    uint64
 }
 
 type bufferWriter struct {
@@ -38,7 +36,7 @@ type bufferWriter struct {
 	startTime   time.Time
 	byteSize    uint64 // The number of bytes written to this file
 	maxFileSize uint64
-	bufferSize  int
+	bufferSize  uint64
 }
 
 func (w *mFileLogger) getBuffer() *bufferNode {
@@ -72,16 +70,14 @@ func (w *mFileLogger) Close() error {
 	return w.flush()
 }
 
-func NewFileLogger(path, name string, flushInterval time.Duration, fileSplitSize uint64, bufferSize int) (writer io.Writer, err error) {
+func NewFileLogger(path string, flushInterval time.Duration, fileSplitSize uint64, bufferSize uint64) (writer Writer, err error) {
 	writer = &mFileLogger{
 		filepath:      path,
-		name:          name,
 		flushInterval: flushInterval,
 		fileSplitSize: fileSplitSize,
 		bufferSize:    bufferSize,
 		writer: &bufferWriter{
 			logPath:     path,
-			logName:     name,
 			maxFileSize: fileSplitSize,
 			bufferSize:  bufferSize,
 		},
@@ -123,7 +119,6 @@ func (w *mFileLogger) Write(msg []byte) (n int, err error) {
 	if writer == nil {
 		w.writer = &bufferWriter{
 			logPath:     w.filepath,
-			logName:     w.name,
 			maxFileSize: w.fileSplitSize,
 			bufferSize:  w.bufferSize,
 		}
@@ -143,8 +138,8 @@ func (bufferW *bufferWriter) Write(p []byte) (n int, err error) {
 	bufferW.Writer.Available()
 	n, err = bufferW.Writer.Write(p)
 	bufferW.byteSize += uint64(n)
-	if bufferW.Buffered() >= bufferW.bufferSize {
-		bufferW.Writer.Flush()
+	if bufferW.Buffered() >= int(bufferW.bufferSize) {
+		err = bufferW.Writer.Flush()
 	}
 	return n, err
 }
@@ -189,18 +184,18 @@ func (bufferW *bufferWriter) rotate(oldTime time.Time, slot int) (err error) {
 		} else {
 			newFileName = fmt.Sprintf("%s-%02d%02d%02d", bufferW.logPath, year, month, day)
 		}
-		os.Rename(bufferW.logPath, newFileName)
+		err = os.Rename(bufferW.logPath, newFileName)
 	}
 
 	if err := bufferW.openFile(bufferW.logPath, bufferW.logName); err != nil {
-		return fmt.Errorf("rotate file error: %#v", err)
+		return fmt.Errorf("rotate file error: %s", err.Error())
 	}
 	fileInfo, err = bufferW.file.Stat()
 	if err != nil {
 		return
 	}
 	bufferW.byteSize = uint64(fileInfo.Size())
-	bufferW.Writer = bufio.NewWriterSize(bufferW.file, bufferW.bufferSize)
+	bufferW.Writer = bufio.NewWriterSize(bufferW.file, int(bufferW.bufferSize))
 	bufferW.slot = slot
 	bufferW.startTime = time.Now()
 	bufferW.byteSize = 0

@@ -17,19 +17,14 @@ func NewSyslogWriter(network, raddr string, level Level, tag string) (Writer, er
 	switch level {
 	case LevelDebug:
 		priority = syslog.LOG_DEBUG
-		break
 	case LevelInfo:
 		priority = syslog.LOG_INFO
-		break
 	case LevelWarn:
 		priority = syslog.LOG_WARNING
-		break
 	case LevelError:
 		priority = syslog.LOG_ERR
-		break
 	case LevelFatal:
 		priority = syslog.LOG_ALERT
-		break
 	default:
 		priority = syslog.LOG_INFO
 	}

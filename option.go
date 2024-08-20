@@ -18,6 +18,17 @@ const (
 	LevelFatal
 )
 
+var (
+	levelToNames = map[Level]string{
+		LevelFatal: "FATAL",
+		LevelError: "ERROR",
+		LevelWarn:  "WARN",
+		LevelInfo:  "INFO",
+		LevelDebug: "DEBUG",
+		LevelTrace: "TRACE",
+	}
+)
+
 func (l *Level) String() string {
 	return levelToNames[*l]
 }
@@ -56,6 +67,16 @@ const (
 	BasePath
 )
 
+type Channel byte
+
+const (
+	STDOUT Channel = iota
+	SYSLOG         = 0b0001
+	KAFKA          = 0b0010
+	FIlE           = 0b0100
+	LOGRUS         = 0b1000
+)
+
 func (c *Caller) String() string {
 	switch *c {
 	case NONE:
@@ -82,17 +103,77 @@ func (c *Caller) Set(value string) error {
 	}
 	return nil
 }
+func (c *Channel) String() string {
+	switch *c {
+	case FIlE:
+		return "file"
+	case SYSLOG:
+		return "syslog"
+	case STDOUT:
+		return "stdout"
+	case LOGRUS:
+		return "logrus"
+	}
+	return "file"
+}
+func (c Channel) Set(value string) Channel {
+	switch strings.ToLower(value) {
+	case "file":
+		c = FIlE
+	case "syslog":
+		c = SYSLOG
+	case "logurs":
+		c = LOGRUS
+	case "none":
+		c = STDOUT
+	default:
+		c = FIlE
+	}
+	return c
+}
 
 type Option func(*Logger)
 
-func SetLevel(_level *Level) Option {
+func SetLevel(_level Level) Option {
 	return func(l *Logger) {
 		l.level = _level
 	}
 }
 
-func Name(name string) Option {
+// WithChannel add Output channel
+func WithChannel(channel Channel) Option {
 	return func(l *Logger) {
-		l.logName = name
+		if channel == KAFKA {
+			println("logkit ignore kafka channel, not implement")
+			return
+		}
+		l.channels = append(l.channels, channel)
+	}
+}
+
+// SetPath set log filename
+func SetPath(path string) Option {
+	return func(l *Logger) {
+		l.logPath = path
+	}
+}
+
+// SetWithCaller set caller flag
+// set before inited
+func SetWithCaller(withWho Caller) Option {
+	return func(l *Logger) {
+		l.caller = withWho
+	}
+}
+
+func SetFileSplitSize(size uint64) Option {
+	return func(l *Logger) {
+		l.fileSplitSize = size
+	}
+}
+
+func SetFileBuffSize(size uint64) Option {
+	return func(l *Logger) {
+		l.fileBuffSize = size
 	}
 }
