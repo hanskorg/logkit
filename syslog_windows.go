@@ -1,5 +1,7 @@
 package logkit
 
+import "os"
+
 type SyslogWriter struct {
 	network string
 	raddr   string
@@ -9,7 +11,7 @@ type SyslogWriter struct {
 }
 
 func NewSyslogWriter(network, raddr string, level Level, tag string) (Writer, error) {
-	return nil, nil
+	return os.Stdout, nil
 }
 
 func (self *SyslogWriter) Write(msg []byte) (int, error) {
